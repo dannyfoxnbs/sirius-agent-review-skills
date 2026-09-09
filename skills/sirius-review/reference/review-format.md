@@ -1,35 +1,42 @@
 # The review document
 
-`.sirius/review.md` is what Sirius reads, so every entry is an imperative
-instruction anchored to a `file:line` — not an observation.
+`.sirius/review.md` is what Sirius reads. Two sections, split by who is speaking:
+
+- **Review Comments** — the threads other people and bots left on the PR, one
+  entry per distinct comment, with the code it was pointing at.
+- **Dev Suggested Feedback** — what the developer running this review wants
+  changed, in their own words.
+
+Every entry under either heading is an imperative instruction anchored to a
+`file:line` — not an observation. Where the fix is already worked out locally,
+paste it as a snippet: the agent copies working code more reliably than it
+reconstructs it from a description.
 
 ````markdown
 ---
-workItem: 96178
-# agent: be-agent   # only when the title has no [FE-01]/[BE-01] tag
+workItem: <the work item id pr.py printed in step 1>
 ---
 
-# Sirius PR Review
+# PR Feedback
 
-## Required Changes
+## Review Comments
 
 ### `path/to/file.ts:42`
 
-What is wrong and why, then what to do instead. Add a diff block when the
-patch is shorter than describing it:
+What the reviewer asked for, and what to do about it.
 
 ```diff
-- const x = 1
-+ const x = 2
+- const value = JSON.parse(input)
++ const value = schema.parse(input)
 ```
 
-## Suggestions
+## Dev Suggested Feedback
 
-Non-blocking.
+### `path/to/file.ts:88`
 
-## Out of Scope
-
-A record of what the developer decided not to ask for.
+What the developer wants changed, with the code they worked out locally.
 ````
 
-`Out of Scope` and `Notes` are developer-only — submit strips them.
+Submit derives the agent from the work item title, so add `agent: fe-agent` to
+the frontmatter only when the title carries no `[FE-01]`/`[BE-01]` tag. A
+`Notes` section, if the developer wants one, stays local — submit strips it.
