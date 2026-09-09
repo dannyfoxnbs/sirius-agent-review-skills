@@ -5,5 +5,8 @@
   "agents": {
     "FE": "fe-agent",
     "BE": "be-agent"
-  }
+  },
+  "ignoreAuthors": [
+    "Andri.Ferinata@hubexo.com"
+  ]
 }

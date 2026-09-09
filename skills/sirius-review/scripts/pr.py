@@ -86,26 +86,39 @@ def find_pr(org, auth):
     return next((p for p in prs if p["status"] == "active"), prs[0])
 
 
-def threads(org, repo, pr_id, auth, show_all):
-    """(file, line, id, status, [(author, text)]) per comment thread, sorted."""
+def ignored(author, ignore):
+    """Is this author listed in sirius.json's ignoreAuthors? Email or name."""
+    return bool(ignore & {(author.get("uniqueName") or "").lower(),
+                          (author.get("displayName") or "").lower()})
+
+
+def threads(org, repo, pr_id, auth, show_all, ignore):
+    """(file, line, id, status, [(author, text)]) per comment thread, sorted,
+    plus how many threads were hidden as coming only from ignored authors."""
     url = (f"{org}/{repo['project']['name']}/_apis/git/repositories/{repo['id']}"
            f"/pullRequests/{pr_id}/threads?{API}")
-    out = []
+    out, hidden = [], 0
     for t in api(url, auth).get("value", []):
         status = (t.get("status") or "unknown").lower()
         if t.get("isDeleted") or (status not in UNRESOLVED and not show_all):
             continue
-        said = [(c["author"]["displayName"], plain(c.get("content")))
+        said = [(c["author"], plain(c.get("content")))
                 for c in t.get("comments", [])
                 if not c.get("isDeleted") and c.get("commentType") != "system"]
         said = [s for s in said if s[1]]
         if not said:
             continue
+        # Only noise when nobody else joined in — a human reply keeps the
+        # thread, and the ignored comment with it, so the reply still reads.
+        if all(ignored(who, ignore) for who, _ in said):
+            hidden += 1
+            continue
         ctx = t.get("threadContext") or {}
         anchor = ctx.get("rightFileStart") or ctx.get("leftFileStart") or {}
         out.append((ctx.get("filePath") or "~ general", anchor.get("line") or 0,
-                    t["id"], status, said))
-    return sorted(out)
+                    t["id"], status,
+                    [(who["displayName"], text) for who, text in said]))
+    return sorted(out), hidden
 
 
 def main():
@@ -137,9 +150,12 @@ def main():
     if not git("merge-base", f"origin/{base}", "HEAD"):
         print("  warning     no merge base — run `git fetch origin`")
 
+    # --all means everything: resolved threads and ignored authors alike.
     show_all = "--all" in argv
-    found = threads(org, repo, pr_id, auth, show_all)
-    print(f"\n{len(found)} {'' if show_all else 'unresolved '}comment thread(s)")
+    ignore = set() if show_all else {a.lower() for a in cfg.get("ignoreAuthors", [])}
+    found, hidden = threads(org, repo, pr_id, auth, show_all, ignore)
+    print(f"\n{len(found)} {'' if show_all else 'unresolved '}comment thread(s)"
+          + (f"  ({hidden} hidden — ignoreAuthors in sirius.json)" if hidden else ""))
     seen = None
     for path, line, tid, status, said in found:
         if path != seen:

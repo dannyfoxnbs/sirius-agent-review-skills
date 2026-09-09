@@ -25,9 +25,10 @@ prevents. Skip what the threads already cover.
 
 When the developer has already reviewed in the Azure DevOps UI, the threads are
 the material. Collapse one rule firing on twenty lines into one instruction, and
-ask what a terse comment meant. `pr.py` lists only unresolved threads: resolved
-means the developer is happy with it, so it stays out of the feedback and a
-later review round starts from what is still open.
+ask what a terse comment meant. `pr.py` lists only unresolved threads from
+authors worth reading: resolved means the developer is happy with it, and
+`ignoreAuthors` in `sirius.json` drops bots that never resolve their own
+threads. Both stay out of the feedback; `--all` brings them back.
 
 Show the candidates as a numbered list — file:line, one-line gist — and ask
 which to keep. Sign-off on that list is what unblocks step 3.

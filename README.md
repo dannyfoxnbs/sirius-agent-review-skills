@@ -35,9 +35,15 @@ That's it.
   "org": "https://thenbs.visualstudio.com/",
   "gate": "ag",
   "directive": "@{agent};rework;yes;{gate};",
-  "agents": { "FE": "fe-agent", "BE": "be-agent" }
+  "agents": { "FE": "fe-agent", "BE": "be-agent" },
+  "ignoreAuthors": ["Andri.Ferinata@hubexo.com"]
 }
 ```
+
+`ignoreAuthors` hides comment threads from bots that never resolve their own
+threads. Email or display name, either works. A thread is only hidden when
+*every* comment in it is from an ignored author — if someone replied, the whole
+thread stays. `pr.py --all` shows them again.
 
 The agent is picked from the ticket title — `[FE-01] …` is `fe-agent`. To
 override it for one review, put `agent: be-agent` in the `.sirius/review.md`
