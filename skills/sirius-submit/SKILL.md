@@ -17,9 +17,11 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/submit.py
 Posts nothing. Prints the exact comment — directive line plus review body — and
 the target work item's title. Show that output and check with them:
 
-- Is that the right work item?
-- Is the directive right? `fe-agent` / `be-agent`, and gate `ag` (agent) or
-  `hg` (human). Change with `agent:` / `gate:` in the review.md frontmatter.
+- Is that the right work item? The title is printed with it.
+- Is the directive right? The agent comes from the work item's title tag —
+  `[FE-01]` means `fe-agent`, `[BE-01]` means `be-agent`. Anything else and it
+  refuses until you add `agent:` to the frontmatter. Gate is `ag` (agent) by
+  default; `hg` for a human gate, via `gate:`.
 - Does the body say what they want Sirius to do?
 
 Fix `.sirius/review.md` if not, and preview again.

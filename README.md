@@ -61,7 +61,7 @@ the work item already has a rework comment.
 ---
 pr: 41618
 workItem: 96178
-# agent: be-agent    # optional, default fe-agent
+# agent: be-agent    # only if the title has no [FE-01]/[BE-01] tag
 # gate: hg           # optional, default ag
 ---
 
@@ -84,6 +84,11 @@ Not submitted.
 
 Only `workItem` is required. Everything is submitted except `Out of Scope`,
 `Notes` and HTML comments, with the directive line prepended.
+
+Which agent gets tagged comes from the work item's title tag — `[FE-01]` is
+`fe-agent`, `[BE-01]` is `be-agent`. If a title has neither (an `[FS-01]`
+full-stack ticket, say), submit refuses rather than guessing, and you set
+`agent:` yourself.
 
 ## Notes
 

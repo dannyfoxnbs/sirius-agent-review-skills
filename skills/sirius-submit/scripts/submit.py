@@ -8,15 +8,17 @@ Prints the exact comment and posts nothing unless --confirm is given.
 """
 import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.request
 from pathlib import Path
+from typing import NoReturn
 
 API = "api-version=7.1"
 COMMENTS_API = "api-version=7.1-preview.4"   # comments have no stable route
 DIRECTIVE = "@{agent};rework;yes;{gate};"   # edit here if Sirius changes format
-DEFAULTS = {"agent": "fe-agent", "gate": "ag"}
+AGENTS = {"FE": "fe-agent", "BE": "be-agent"}   # keyed by the work item title tag
+GATE = "ag"                                 # ag agent, hg human, kg knowledge graph
 DROP = {"out of scope", "notes"}            # sections that are never submitted
 
 
-def die(msg):
+def die(msg) -> NoReturn:
     sys.exit(f"error: {msg}")
 
 
@@ -85,18 +87,21 @@ def load():
     return meta, re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
 
 
+def agent_for(meta, title):
+    """Which agent to tag. The frontmatter wins, else the work item's title
+    tag: [FE-01] is the frontend agent, [BE-01] the backend one."""
+    if meta.get("agent"):
+        return meta["agent"]
+    tag = re.search(r"\[(FE|BE)-\d+\]", title)
+    if tag:
+        return AGENTS[tag.group(1)]
+    die(f"cannot tell which agent to tag from {title!r} — add "
+        "`agent: fe-agent` or `agent: be-agent` to the review.md frontmatter.")
+
+
 def main():
     meta, body = load()
-    directive = DIRECTIVE.format(agent=meta.get("agent", DEFAULTS["agent"]),
-                                 gate=meta.get("gate", DEFAULTS["gate"]))
-    # Work item comments are stored as HTML, so escape the characters that would
-    # otherwise be swallowed. Newlines survive as they are.
-    comment = html.escape(f"{directive}\n{body}", quote=False)
     work_item = meta.get("workItem", "")
-
-    print(f"--- comment for work item #{work_item or '?'} ---")
-    print(comment)
-    print("--- end ---\n")
 
     if not body:
         die("the review body is empty.")
@@ -106,12 +111,23 @@ def main():
         die("the body already starts with an @directive — one is added for you.")
 
     org = env("AZURE_DEVOPS_ORG", "https://thenbs.visualstudio.com/").rstrip("/")
-    item = api(f"{org}/_apis/wit/workItems/{work_item}?{API}")
-    project = item["fields"]["System.TeamProject"]
+    fields = api(f"{org}/_apis/wit/workItems/{work_item}?{API}")["fields"]
+    title, project = fields["System.Title"], fields["System.TeamProject"]
+
+    directive = DIRECTIVE.format(agent=agent_for(meta, title),
+                                 gate=meta.get("gate", GATE))
+    # Work item comments are stored as HTML, so escape the characters that would
+    # otherwise be swallowed. Newlines survive as they are.
+    comment = html.escape(f"{directive}\n{body}", quote=False)
+
+    print(f"--- comment for work item #{work_item}  {title} ---")
+    print(comment)
+    print("--- end ---\n")
+
     url = f"{org}/{project}/_apis/wit/workItems/{work_item}/comments?{COMMENTS_API}"
 
     if "--confirm" not in sys.argv:
-        print(f"Preview only — nothing posted.  {item['fields']['System.Title']}")
+        print("Preview only — nothing posted.")
         print("Re-run with --confirm to post it and start the rework.")
         return
 

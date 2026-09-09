@@ -15,8 +15,10 @@ becomes feedback.** This skill writes one file and posts nothing.
 python3 ${CLAUDE_SKILL_DIR}/scripts/pr.py $ARGUMENTS
 ```
 
-Prints the PR, the diff command to use, the work item id, and every unresolved
-comment thread. Use the diff command it gives you — not a guessed base.
+Prints the PR, the diff command to use, the work item id, which Sirius agent
+owns it, and every unresolved comment thread. Use the diff command it gives you
+— not a guessed base. If it reports the agent as unknown, ask the developer
+which one to tag and record it as `agent:` in step 4.
 
 ## 2. Gather findings
 
@@ -46,7 +48,7 @@ Discuss as long as they want. Do not write the file until they have signed off.
 ---
 pr: 41618
 workItem: 96178
-# agent: be-agent   # optional, default fe-agent
+# agent: be-agent   # only if the work item title has no [FE-01]/[BE-01] tag
 # gate: hg          # optional, default ag
 ---
 

@@ -9,13 +9,15 @@ Usage:  pr.py [--pr <id>] [--all]
 """
 import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.request
 from pathlib import Path
+from typing import NoReturn
 from urllib.parse import quote
 
 API = "api-version=7.1"
 UNRESOLVED = {"active", "pending"}
+AGENTS = {"FE": "fe-agent", "BE": "be-agent"}   # keyed by the PR title tag
 
 
-def die(msg):
+def die(msg) -> NoReturn:
     sys.exit(f"error: {msg}")
 
 
@@ -119,9 +121,12 @@ def main():
         f"{org}/{project}/_apis/git/repositories/{repo['id']}"
         f"/pullRequests/{pr_id}/workitems?{API}", token).get("value", [])]
 
+    tag = re.search(r"\[(FE|BE)-\d+\]", pr["title"])
+
     print(f"PR #{pr_id}  {pr['title']}")
     print(f"  base        {base}   ->  git diff origin/{base}...HEAD")
     print(f"  work item   {', '.join(work_items) or 'none linked'}")
+    print(f"  agent       {AGENTS[tag.group(1)] if tag else 'unknown — set `agent:` yourself'}")
     print(f"  url         {org}/{project}/_git/{quote(repo['name'])}/pullrequest/{pr_id}")
     if not git("merge-base", f"origin/{base}", "HEAD"):
         print(f"  warning     no merge base — run `git fetch origin`")
