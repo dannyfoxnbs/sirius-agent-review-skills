@@ -15,6 +15,7 @@ from urllib.parse import quote
 API = "api-version=7.1"
 UNRESOLVED = {"active", "pending"}
 AGENTS = {"FE": "fe-agent", "BE": "be-agent"}   # keyed by the PR title tag
+# "FS": "fs-agent" — add above once the full-stack agent exists.
 
 
 def die(msg) -> NoReturn:

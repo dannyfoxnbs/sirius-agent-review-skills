@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Post .sirius/review.md to its work item as one comment tagging Sirius.
 
-Usage:  submit.py [--confirm] [--force]
+Usage:  submit.py [--confirm] [--no-tag] [--force]
 
 Prints the exact comment and posts nothing unless --confirm is given.
---force posts even if the work item already has a rework comment.
+--no-tag posts the review without the directive line, so nothing is triggered
+and you can read it in context first. --force posts even if the work item
+already has a rework comment.
 """
 import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.request
 from pathlib import Path
@@ -14,6 +16,8 @@ API = "api-version=7.1"
 COMMENTS_API = "api-version=7.1-preview.4"   # comments have no stable route
 DIRECTIVE = "@{agent};rework;yes;{gate};"   # edit here if Sirius changes format
 AGENTS = {"FE": "fe-agent", "BE": "be-agent"}   # keyed by the work item title tag
+# "FS": "fs-agent" — add above once the full-stack agent exists. Until then an
+# [FS-01] ticket has no agent to tag, so submit asks rather than guessing.
 GATE = "ag"                                 # ag agent, hg human, kg knowledge graph
 DROP = {"out of scope", "notes"}            # sections that are never submitted
 
@@ -114,13 +118,17 @@ def main():
     fields = api(f"{org}/_apis/wit/workItems/{work_item}?{API}")["fields"]
     title, project = fields["System.Title"], fields["System.TeamProject"]
 
+    # Without the directive line the comment is inert: Sirius never sees it, so
+    # you can post a draft, read it in context, delete it and post again.
+    tagged = "--no-tag" not in sys.argv
     directive = DIRECTIVE.format(agent=agent_for(meta, title),
-                                 gate=meta.get("gate", GATE))
+                                 gate=meta.get("gate", GATE)) if tagged else ""
     # Work item comments are stored as HTML, so escape the characters that would
     # otherwise be swallowed. Newlines survive as they are.
-    comment = html.escape(f"{directive}\n{body}", quote=False)
+    comment = html.escape(f"{directive}\n{body}" if tagged else body, quote=False)
 
-    print(f"--- comment for work item #{work_item}  {title} ---")
+    kind = "comment" if tagged else "DRAFT comment (no agent tagged)"
+    print(f"--- {kind} for work item #{work_item}  {title} ---")
     print(comment)
     print("--- end ---\n")
 
@@ -128,10 +136,11 @@ def main():
 
     if "--confirm" not in sys.argv:
         print("Preview only — nothing posted.")
-        print("Re-run with --confirm to post it and start the rework.")
+        print(f"Re-run with --confirm to post it"
+              + ("." if not tagged else " and start the rework."))
         return
 
-    if "--force" not in sys.argv:
+    if tagged and "--force" not in sys.argv:
         prior = [c for c in api(f"{url}&$top=50").get("comments", [])
                  if directive in c.get("text", "")]
         if prior:
@@ -141,6 +150,9 @@ def main():
     posted = api(url, "POST", {"text": comment})
     print(f"posted comment #{posted['id']}")
     print(f"{org}/{project}/_workitems/edit/{work_item}")
+    if not tagged:
+        print("No agent tagged — nothing triggered. Delete the comment in Azure "
+              "DevOps and re-run without --no-tag when you are happy with it.")
 
 
 if __name__ == "__main__":

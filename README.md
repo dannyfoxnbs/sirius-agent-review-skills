@@ -48,12 +48,16 @@ Or run the scripts directly from inside the repo you're reviewing:
 
 ```bash
 python3 skills/sirius-review/scripts/pr.py [--pr <id>] [--all]
-python3 skills/sirius-submit/scripts/submit.py [--confirm]
+python3 skills/sirius-submit/scripts/submit.py [--confirm] [--no-tag]
 ```
 
-`pr.py` prints the PR, the right diff base, the work item and every unresolved
-comment thread. `submit.py` posts nothing without `--confirm`, and refuses if
-the work item already has a rework comment.
+`pr.py` prints the PR, the right diff base, the work item, the agent and every
+unresolved comment thread. `submit.py` posts nothing without `--confirm`, and
+refuses if the work item already has a rework comment.
+
+`--no-tag` posts the review **without** the directive line. Sirius never sees
+it, so nothing is triggered — use it to read a draft in context on the work
+item, then delete the comment and re-run without the flag when you're happy.
 
 ## The review document
 
@@ -88,7 +92,8 @@ Only `workItem` is required. Everything is submitted except `Out of Scope`,
 Which agent gets tagged comes from the work item's title tag — `[FE-01]` is
 `fe-agent`, `[BE-01]` is `be-agent`. If a title has neither (an `[FS-01]`
 full-stack ticket, say), submit refuses rather than guessing, and you set
-`agent:` yourself.
+`agent:` yourself. When the full-stack agent exists, add `"FS": "fs-agent"` to
+`AGENTS` in `submit.py` and `pr.py`.
 
 ## Notes
 
