@@ -1,12 +1,12 @@
 ---
 name: sirius-submit
-description: Post an approved .sirius/review.md to its Azure DevOps work item as one comment tagging the Sirius agent, which starts a rework run. Use only when the developer has explicitly asked to submit the review.
+description: Post an approved .sirius/review.md to its work item as one comment tagging the Sirius agent.
 disable-model-invocation: true
 ---
 
 # Submit the review to Sirius
 
-This starts a real rework run. **Only run it when the developer explicitly asks.**
+This starts a real rework run. Run it only when the developer explicitly asks.
 
 ## 1. Preview
 
@@ -14,9 +14,8 @@ This starts a real rework run. **Only run it when the developer explicitly asks.
 python3 ${CLAUDE_SKILL_DIR}/scripts/submit.py
 ```
 
-Posts nothing. Show them the output and confirm the work item, the directive
-line and the body are what they want. Fix `.sirius/review.md` if not, and
-preview again.
+Posts nothing. Show them the work item, the directive line and the body, fix
+`.sirius/review.md` if any of it is wrong, and preview again.
 
 ## 2. Post
 
@@ -24,12 +23,11 @@ preview again.
 python3 ${CLAUDE_SKILL_DIR}/scripts/submit.py --confirm
 ```
 
-Add `--no-tag` to post it as a draft with no directive line — nothing is
-triggered, they read it on the work item, delete it, and re-run without the
-flag when happy.
+`--no-tag` posts it as a draft with no directive line, so nothing is triggered:
+they read it on the work item, delete it, and re-run without the flag.
 
-If the work item already has a rework comment, this refuses; only add `--force`
-if they confirm they want a second run.
+It refuses if the work item already has a rework comment — add `--force` only
+when they confirm they want a second run.
 
 Report the comment id and URL. Sirius replies on the work item when the run
-starts — don't poll for it.
+starts; leave them to watch for it.

@@ -6,8 +6,7 @@ argument-hint: [--pr <id>] [--all]
 
 # Review a Sirius PR
 
-You help the developer review a PR a coding agent wrote. **They decide what
-becomes feedback.** This skill writes one file and posts nothing.
+The developer decides what becomes feedback. This skill writes one file and posts nothing.
 
 ## 1. Read the PR
 
@@ -15,56 +14,30 @@ becomes feedback.** This skill writes one file and posts nothing.
 python3 ${CLAUDE_SKILL_DIR}/scripts/pr.py $ARGUMENTS
 ```
 
-Gives you the diff command to run, the work item, the agent, and the open
-comment threads. Use that diff command — don't guess the base. If the agent
-comes back unknown, ask which one and record it in step 3.
+It prints a diff command, the work item, the agent, and the open comment
+threads. Run that diff command. Ask which agent if it comes back unknown.
 
-## 2. Find and agree the findings
+## 2. Agree the findings
 
-Review the diff against the repo's own conventions (`CLAUDE.md`, `AGENTS.md`,
-nearby code) — correctness, regressions, convention violations, duplication of
-what already exists. Skip anything the comment threads already cover. If you
-can't name the specific bad outcome, it isn't a finding.
+Review the diff for correctness, regressions, convention violations, and code
+duplicating what already exists. Every finding names the specific bad outcome it
+prevents. Skip what the threads already cover.
 
-If the developer already reviewed in the Azure DevOps UI, the threads from step
-1 are the material. SonarCloud posts as `SVC_ADO`: collapse a rule firing on
-twenty lines into one instruction. Ask what a terse comment meant rather than
-inventing a reason for it.
+When the developer has already reviewed in the Azure DevOps UI, the threads are
+the material. Collapse one rule firing on twenty lines into one instruction, and
+ask what a terse comment meant. `pr.py` lists only unresolved threads: resolved
+means the developer is happy with it, so it stays out of the feedback and a
+later review round starts from what is still open.
 
-Then show the candidates as a numbered list — file:line, one-line gist — and
-**ask which to keep**. Expect rejections and additions. Don't write the file
-until they've signed off.
+Show the candidates as a numbered list — file:line, one-line gist — and ask
+which to keep. Sign-off on that list is what unblocks step 3.
 
-## 3. Write `.sirius/review.md`
+## 3. Write the review document
 
-```markdown
----
-workItem: 96178
-# agent: be-agent   # only if the title has no [FE-01]/[BE-01] tag
----
+`.sirius/review.md`, in the format in
+[`reference/review-format.md`](reference/review-format.md).
 
-# Sirius PR Review
+## 4. Hand back
 
-## Required Changes
-
-### `path/to/file.ts:42`
-
-What is wrong and why, then what to do instead. Add a diff code block when a
-patch is shorter than describing it.
-
-## Suggestions
-
-Non-blocking.
-
-## Out of Scope
-
-Not submitted — a record of what you decided not to ask for.
-```
-
-Sirius reads this, so write imperative instructions anchored to a file:line,
-not observations. `Out of Scope` and `Notes` are stripped on submit.
-
-## 4. Stop
-
-Show them the file, let them edit it, and tell them `sirius-submit` posts it.
-Do not submit.
+Show them the file and let them edit it. Posting is `sirius-submit`, and only
+when they ask for it.
