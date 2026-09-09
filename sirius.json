@@ -1,0 +1,9 @@
+{
+  "org": "https://thenbs.visualstudio.com/",
+  "gate": "ag",
+  "directive": "@{agent};rework;yes;{gate};",
+  "agents": {
+    "FE": "fe-agent",
+    "BE": "be-agent"
+  }
+}

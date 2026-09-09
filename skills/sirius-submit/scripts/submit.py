@@ -3,10 +3,9 @@
 
 Usage:  submit.py [--confirm] [--no-tag] [--force]
 
-Prints the exact comment and posts nothing unless --confirm is given.
---no-tag posts the review without the directive line, so nothing is triggered
-and you can read it in context first. --force posts even if the work item
-already has a rework comment.
+Prints the comment and posts nothing unless --confirm is given.
+--no-tag leaves the directive line off, so nothing is triggered.
+--force posts even if the work item already has a rework comment.
 """
 import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.request
 from pathlib import Path
@@ -14,38 +13,41 @@ from typing import NoReturn
 
 API = "api-version=7.1"
 COMMENTS_API = "api-version=7.1-preview.4"   # comments have no stable route
-DIRECTIVE = "@{agent};rework;yes;{gate};"   # edit here if Sirius changes format
-AGENTS = {"FE": "fe-agent", "BE": "be-agent"}   # keyed by the work item title tag
-# "FS": "fs-agent" — add above once the full-stack agent exists. Until then an
-# [FS-01] ticket has no agent to tag, so submit asks rather than guessing.
-GATE = "ag"                                 # ag agent, hg human, kg knowledge graph
-DROP = {"out of scope", "notes"}            # sections that are never submitted
+DROP = {"out of scope", "notes"}             # sections that are never submitted
 
 
 def die(msg) -> NoReturn:
     sys.exit(f"error: {msg}")
 
 
-def env(key, default=""):
-    """Environment, else a .env file in this skill or any parent directory."""
-    if os.environ.get(key):
-        return os.environ[key]
-    for d in [Path(__file__).resolve().parent] + list(Path(__file__).resolve().parents):
-        f = d / ".env"
-        if f.exists():
-            for line in f.read_text().splitlines():
-                k, sep, v = line.partition("=")
-                if sep and k.strip() == key:
-                    return v.strip().strip("'\"")
-    return default
+def find_up(name):
+    """The nearest file with this name, from this script's folder upwards."""
+    here = Path(__file__).resolve()
+    for folder in [here.parent, *here.parents]:
+        if (folder / name).exists():
+            return folder / name
+    die(f"{name} not found. Keep the skills symlinked to sirius-review-tools, "
+        f"or put {name} in a folder above them.")
+
+
+def settings():
+    return json.loads(find_up("sirius.json").read_text())
+
+
+def token():
+    pat = os.environ.get("AZURE_DEVOPS_PAT", "")
+    if not pat:
+        for line in find_up(".env").read_text().splitlines():
+            key, sep, value = line.partition("=")
+            if sep and key.strip() == "AZURE_DEVOPS_PAT":
+                pat = value.strip().strip("'\"")
+    if not pat:
+        die("no token — put AZURE_DEVOPS_PAT in .env (see .env.example).")
+    return base64.b64encode(f":{pat}".encode()).decode()
 
 
 def api(url, method="GET", body=None):
-    pat = env("AZURE_DEVOPS_PAT") or env("AZURE_DEVOPS_EXT_PAT")
-    if not pat:
-        die("no PAT — set AZURE_DEVOPS_PAT in .env (see .env.example).")
-    token = base64.b64encode(f":{pat}".encode()).decode()
-    headers = {"Authorization": f"Basic {token}"}
+    headers = {"Authorization": f"Basic {token()}"}
     data = None
     if body is not None:
         data, headers["Content-Type"] = json.dumps(body).encode(), "application/json"
@@ -54,7 +56,7 @@ def api(url, method="GET", body=None):
         with urllib.request.urlopen(req) as r:
             return json.loads(r.read().decode() or "{}")
     except urllib.error.HTTPError as e:
-        die("PAT rejected — expired or missing Work Items (Read & Write)."
+        die("token rejected — expired, or missing Work Items (Read & Write)."
             if e.code in (401, 203)
             else f"HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
     except urllib.error.URLError as e:
@@ -91,19 +93,20 @@ def load():
     return meta, re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
 
 
-def agent_for(meta, title):
-    """Which agent to tag. The frontmatter wins, else the work item's title
-    tag: [FE-01] is the frontend agent, [BE-01] the backend one."""
+def agent_for(meta, title, agents):
+    """Which agent to tag. The frontmatter wins, else the work item's title tag
+    ("[FE-01] ..." -> fe-agent). Both are listed in sirius.json."""
     if meta.get("agent"):
         return meta["agent"]
-    tag = re.search(r"\[(FE|BE)-\d+\]", title)
-    if tag:
-        return AGENTS[tag.group(1)]
-    die(f"cannot tell which agent to tag from {title!r} — add "
-        "`agent: fe-agent` or `agent: be-agent` to the review.md frontmatter.")
+    tag = re.search(r"\[([A-Z]{2})-\d+\]", title)
+    if tag and tag.group(1) in agents:
+        return agents[tag.group(1)]
+    die(f"no agent for {title!r} — add `agent:` to the review.md frontmatter, "
+        "or add its tag to sirius.json.")
 
 
 def main():
+    cfg = settings()
     meta, body = load()
     work_item = meta.get("workItem", "")
 
@@ -114,15 +117,16 @@ def main():
     if body.startswith("@"):
         die("the body already starts with an @directive — one is added for you.")
 
-    org = env("AZURE_DEVOPS_ORG", "https://thenbs.visualstudio.com/").rstrip("/")
+    org = cfg["org"].rstrip("/")
     fields = api(f"{org}/_apis/wit/workItems/{work_item}?{API}")["fields"]
     title, project = fields["System.Title"], fields["System.TeamProject"]
 
     # Without the directive line the comment is inert: Sirius never sees it, so
     # you can post a draft, read it in context, delete it and post again.
     tagged = "--no-tag" not in sys.argv
-    directive = DIRECTIVE.format(agent=agent_for(meta, title),
-                                 gate=meta.get("gate", GATE)) if tagged else ""
+    directive = cfg["directive"].format(
+        agent=agent_for(meta, title, cfg["agents"]),
+        gate=meta.get("gate", cfg["gate"])) if tagged else ""
     # Work item comments are stored as HTML, so escape the characters that would
     # otherwise be swallowed. Newlines survive as they are.
     comment = html.escape(f"{directive}\n{body}" if tagged else body, quote=False)
@@ -136,7 +140,7 @@ def main():
 
     if "--confirm" not in sys.argv:
         print("Preview only — nothing posted.")
-        print(f"Re-run with --confirm to post it"
+        print("Re-run with --confirm to post it"
               + ("." if not tagged else " and start the rework."))
         return
 

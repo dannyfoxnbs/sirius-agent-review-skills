@@ -15,41 +15,32 @@ becomes feedback.** This skill writes one file and posts nothing.
 python3 ${CLAUDE_SKILL_DIR}/scripts/pr.py $ARGUMENTS
 ```
 
-Prints the PR, the diff command to use, the work item id, which Sirius agent
-owns it, and every unresolved comment thread. Use the diff command it gives you
-— not a guessed base. If it reports the agent as unknown, ask the developer
-which one to tag and record it as `agent:` in step 4.
+Gives you the diff command to run, the work item, the agent, and the open
+comment threads. Use that diff command — don't guess the base. If the agent
+comes back unknown, ask which one and record it in step 3.
 
-## 2. Gather findings
+## 2. Find and agree the findings
 
-Two sources, either or both:
+Review the diff against the repo's own conventions (`CLAUDE.md`, `AGENTS.md`,
+nearby code) — correctness, regressions, convention violations, duplication of
+what already exists. Skip anything the comment threads already cover. If you
+can't name the specific bad outcome, it isn't a finding.
 
-- **The diff.** Read the repo's own `CLAUDE.md` / `AGENTS.md` and nearby code
-  first, then judge the changes against *those* conventions. Look for
-  correctness bugs, regressions, convention violations (the most common failure
-  in agent-written code) and duplication of things that already exist.
-- **The comment threads** from step 1, when the developer has already reviewed
-  in the Azure DevOps UI. SonarCloud posts as `SVC_ADO` — collapse a rule that
-  fires on twenty lines into one instruction, don't restate each thread. Ask
-  what a terse comment meant rather than inventing a rationale for it.
+If the developer already reviewed in the Azure DevOps UI, the threads from step
+1 are the material. SonarCloud posts as `SVC_ADO`: collapse a rule firing on
+twenty lines into one instruction. Ask what a terse comment meant rather than
+inventing a reason for it.
 
-Skip anything a thread already covers. If you cannot name the specific bad
-outcome, it is not a finding.
+Then show the candidates as a numbered list — file:line, one-line gist — and
+**ask which to keep**. Expect rejections and additions. Don't write the file
+until they've signed off.
 
-## 3. Agree the list
-
-Show the candidates as a numbered list — file:line, one-line gist — and **ask
-which to keep**. Expect rejections, rewordings, and additions of their own.
-Discuss as long as they want. Do not write the file until they have signed off.
-
-## 4. Write `.sirius/review.md`
+## 3. Write `.sirius/review.md`
 
 ```markdown
 ---
-pr: 41618
 workItem: 96178
-# agent: be-agent   # only if the work item title has no [FE-01]/[BE-01] tag
-# gate: hg          # optional, default ag
+# agent: be-agent   # only if the title has no [FE-01]/[BE-01] tag
 ---
 
 # Sirius PR Review
@@ -58,8 +49,8 @@ workItem: 96178
 
 ### `path/to/file.ts:42`
 
-What is wrong and why, then what to do instead. Add a diff code block
-when a patch is shorter than describing it.
+What is wrong and why, then what to do instead. Add a diff code block when a
+patch is shorter than describing it.
 
 ## Suggestions
 
@@ -70,10 +61,10 @@ Non-blocking.
 Not submitted — a record of what you decided not to ask for.
 ```
 
-Sirius is the reader, so write imperative instructions anchored to a file:line,
-not observations. `Out of Scope` and `Notes` are stripped before submission.
+Sirius reads this, so write imperative instructions anchored to a file:line,
+not observations. `Out of Scope` and `Notes` are stripped on submit.
 
-## 5. Stop
+## 4. Stop
 
-Show them the file and let them edit it — it is theirs. Tell them
-`sirius-submit` posts it when they are ready. Do not submit.
+Show them the file, let them edit it, and tell them `sirius-submit` posts it.
+Do not submit.
