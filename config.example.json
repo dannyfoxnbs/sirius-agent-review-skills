@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy to .sirius/config.json in the repo you review. Every key is optional; project and repo are derived from the origin remote when omitted.",
+
+  "org": "https://thenbs.visualstudio.com/",
+
+  "directive": "@{agent};{action};{flag};{gate};",
+  "agent": "fe-agent",
+  "action": "rework",
+  "flag": "yes",
+  "gate": "ag",
+
+  "excludeSections": ["Out of Scope", "Notes"]
+}

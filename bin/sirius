@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# sirius — dispatcher for the sirius-review-tools helper scripts.
+#
+#   sirius context  [--pr <id>] [--json]        resolve branch -> PR -> work item
+#   sirius comments [--pr <id>] [--all] [--json] collect existing ADO PR comments
+#   sirius review   init|check|preview|render   work with .sirius/review.md
+#   sirius submit   [--confirm]                 post the review to the work item
+#
+# Runs from any directory inside the target git repo. Python 3, stdlib only.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export PYTHONPATH="$ROOT/scripts${PYTHONPATH:+:$PYTHONPATH}"
+
+cmd="${1:-}"
+[ $# -gt 0 ] && shift || true
+
+case "$cmd" in
+  context)  exec python3 "$ROOT/scripts/sirius_context.py" "$@" ;;
+  comments) exec python3 "$ROOT/scripts/sirius_pr_comments.py" "$@" ;;
+  review)   exec python3 "$ROOT/scripts/sirius_review.py" "$@" ;;
+  submit)   exec python3 "$ROOT/scripts/sirius_submit.py" "$@" ;;
+  ""|-h|--help|help)
+    sed -n '2,9p' "$(readlink -f "${BASH_SOURCE[0]}")" | sed 's/^# \{0,1\}//'
+    ;;
+  *)
+    echo "sirius: unknown command '$cmd' (context|comments|review|submit)" >&2
+    exit 1 ;;
+esac
