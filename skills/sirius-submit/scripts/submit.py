@@ -13,6 +13,8 @@ from typing import NoReturn
 
 API = "api-version=7.1"
 COMMENTS_API = "api-version=7.1-preview.4"   # comments have no stable route
+MARKDOWN = "format=markdown"                 # without it a comment is stored as HTML,
+                                             # and the markdown arrives as one paragraph
 DROP = {"out of scope", "notes"}             # sections that are never submitted
 
 
@@ -130,9 +132,11 @@ def main():
     directive = cfg["directive"].format(
         agent=agent_for(meta, title, cfg["agents"]),
         gate=meta.get("gate", cfg["gate"])) if tagged else ""
-    # Work item comments are stored as HTML, so escape the characters that would
-    # otherwise be swallowed. Newlines survive as they are.
-    comment = html.escape(f"{directive}\n{body}" if tagged else body, quote=False)
+    # Posted as markdown (see MARKDOWN below), but Azure DevOps strips anything
+    # shaped like an HTML tag first — even inside a code fence, which quietly ate
+    # every TypeScript generic — so < and > have to arrive escaped. Escaping
+    # leaves the markdown itself alone. The blank line keeps the directive apart.
+    comment = html.escape(f"{directive}\n\n{body}" if tagged else body, quote=False)
 
     kind = "comment" if tagged else "DRAFT comment (no agent tagged)"
     print(f"--- {kind} for work item #{work_item}  {title} ---")
@@ -154,7 +158,7 @@ def main():
             die("this work item already has a rework comment; posting again starts "
                 "a second run. Pass --force if that is what you want.")
 
-    posted = api(url, "POST", {"text": comment})
+    posted = api(f"{url}&{MARKDOWN}", "POST", {"text": comment})
     print(f"posted comment #{posted['id']}")
     print(f"{org}/{project}/_workitems/edit/{work_item}")
     if not tagged:
