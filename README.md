@@ -52,8 +52,14 @@ frontmatter.
 ## Handy
 
 ```bash
-# post a draft with no agent tagged — nothing gets triggered
-python3 skills/sirius-submit/scripts/submit.py --confirm --no-tag
+# post a draft with no agent tagged — nothing gets triggered (the default)
+python3 skills/sirius-submit/scripts/submit.py
+
+# print the comment without posting it
+python3 skills/sirius-submit/scripts/submit.py --dry-run
+
+# post it for real, tagging the agent and starting the rework run
+python3 skills/sirius-submit/scripts/submit.py --confirm
 
 # read a PR without reviewing it
 python3 skills/sirius-review/scripts/pr.py --pr 41618

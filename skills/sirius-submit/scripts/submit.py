@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Post .sirius/review.md to its work item as one comment tagging Sirius.
+"""Post .sirius/review.md to its work item as one comment.
 
-Usage:  submit.py [--confirm] [--no-tag] [--force]
+Usage:  submit.py [--confirm] [--force] [--dry-run]
 
-Prints the comment and posts nothing unless --confirm is given.
---no-tag leaves the directive line off, so nothing is triggered.
+By default it posts a draft: no directive line, so no agent is tagged and
+nothing is triggered. Read it on the work item, delete it, run it again.
+--confirm adds the directive line and starts the rework run.
 --force posts even if the work item already has a rework comment.
+--dry-run prints the comment and posts nothing.
 """
 import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
@@ -127,8 +129,9 @@ def main():
     project = urllib.parse.quote(fields["System.TeamProject"])
 
     # Without the directive line the comment is inert: Sirius never sees it, so
-    # you can post a draft, read it in context, delete it and post again.
-    tagged = "--no-tag" not in sys.argv
+    # a draft can be posted, read in context, deleted and posted again. That is
+    # the default; tagging an agent is opt-in, so no run starts by accident.
+    tagged = "--confirm" in sys.argv
     directive = cfg["directive"].format(
         agent=agent_for(meta, title, cfg["agents"]),
         gate=meta.get("gate", cfg["gate"])) if tagged else ""
@@ -145,10 +148,8 @@ def main():
 
     url = f"{org}/{project}/_apis/wit/workItems/{work_item}/comments?{COMMENTS_API}"
 
-    if "--confirm" not in sys.argv:
-        print("Preview only — nothing posted.")
-        print("Re-run with --confirm to post it"
-              + ("." if not tagged else " and start the rework."))
+    if "--dry-run" in sys.argv:
+        print("Dry run — nothing posted.")
         return
 
     if tagged and "--force" not in sys.argv:
@@ -162,8 +163,8 @@ def main():
     print(f"posted comment #{posted['id']}")
     print(f"{org}/{project}/_workitems/edit/{work_item}")
     if not tagged:
-        print("No agent tagged — nothing triggered. Delete the comment in Azure "
-              "DevOps and re-run without --no-tag when you are happy with it.")
+        print("Draft — no agent tagged, nothing triggered. Delete the comment in "
+              "Azure DevOps and re-run with --confirm when you are happy with it.")
 
 
 if __name__ == "__main__":
