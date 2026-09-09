@@ -7,7 +7,7 @@ Prints the comment and posts nothing unless --confirm is given.
 --no-tag leaves the directive line off, so nothing is triggered.
 --force posts even if the work item already has a rework comment.
 """
-import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.request
+import base64, html, json, os, re, subprocess, sys, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 from typing import NoReturn
 
@@ -119,7 +119,10 @@ def main():
 
     org = cfg["org"].rstrip("/")
     fields = api(f"{org}/_apis/wit/workItems/{work_item}?{API}")["fields"]
-    title, project = fields["System.Title"], fields["System.TeamProject"]
+    title = fields["System.Title"]
+    # Project names may contain spaces ("Sirius - Template"), which urllib
+    # rejects in a request path. Both uses below are URLs.
+    project = urllib.parse.quote(fields["System.TeamProject"])
 
     # Without the directive line the comment is inert: Sirius never sees it, so
     # you can post a draft, read it in context, delete it and post again.
