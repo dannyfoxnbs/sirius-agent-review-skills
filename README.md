@@ -30,7 +30,7 @@ You need:
 Then either paste this into Claude Code:
 
 ```
-Install the sirius review tools from https://github.com/dannyfoxnbs/sirius-agent-review-loop: clone it to ~/sirius-review-tools,
+Install the sirius review tools from https://github.com/dannyfoxnbs/sirius-agent-review-skills: clone it to ~/sirius-review-tools,
 copy .env.example to .env, and symlink skills/sirius-* into ~/.claude/skills/.
 Then ask me to place my Azure DevOps PAT into .env.
 ```
@@ -38,7 +38,7 @@ Then ask me to place my Azure DevOps PAT into .env.
 or do it by hand:
 
 ```bash
-git clone <this repo> ~/sirius-review-tools
+git clone [<this repo>](https://github.com/dannyfoxnbs/sirius-agent-review-skills) ~/sirius-review-tools
 cd ~/sirius-review-tools
 cp .env.example .env                          # paste your PAT into it
 ln -s "$PWD"/skills/sirius-* ~/.claude/skills/
